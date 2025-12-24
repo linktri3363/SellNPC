@@ -24,7 +24,7 @@ local default_items = T{
     'Chapuli Wing',
     'Chapuli Horn',
     'Colibri Beak',
-    'Colibri Feather',
+    'Colibri Feathers',
     'Crab Shell', 
     'Craklaw Pincer',
     'Flytrap Leaf',
@@ -391,9 +391,25 @@ end)
 -- Initialize on load
 windower.register_event('load', function()
     settings = config.load(defaults)
-    -- Ensure items is a proper table
-    if not settings.items or type(settings.items) ~= 'table' then
+    
+    -- Convert settings.items to a proper sequential table
+    -- The config library can return items as a keyed table from XML
+    if settings.items then
+        local items_list = T{}
+        for k, v in pairs(settings.items) do
+            if type(v) == 'string' then
+                table.insert(items_list, v)
+            end
+        end
+        -- Sort by original index if possible, otherwise alphabetically
+        if #items_list > 0 then
+            settings.items = items_list
+        else
+            settings.items = T(default_items:copy())
+        end
+    else
         settings.items = T(default_items:copy())
     end
+    
     build_auto_sell_list()
 end)

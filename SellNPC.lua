@@ -24,7 +24,7 @@ local default_items = T{
     'Chapuli Wing',
     'Chapuli Horn',
     'Colibri Beak',
-    'Colibri Feathers',
+    'Colibri Feather',
     'Crab Shell', 
     'Craklaw Pincer',
     'Flytrap Leaf',
@@ -328,8 +328,8 @@ function show_list()
 end
 
 function cmd(...)
-    local commands = T{...}
-    local arg1 = commands[1] and commands[1]:lower()
+    local args = {...}
+    local arg1 = args[1] and args[1]:lower()
     
     if arg1 == 'auto' or arg1 == 'start' then
         start_auto_sell()
@@ -341,11 +341,15 @@ function cmd(...)
         show_list()
     elseif arg1 == 'help' then
         show_help()
-    elseif arg1 == 'add' and commands[2] then
-        add_item(table.concat(commands, ' ', 2))
+    elseif arg1 == 'add' then
+        if args[2] then
+            add_item(table.concat(args, ' ', 2))
+        else
+            print('SellNPC Error: Specify an item to add.')
+        end
     elseif arg1 == 'remove' or arg1 == 'rem' or arg1 == 'delete' or arg1 == 'del' then
-        if commands[2] then
-            remove_item(table.concat(commands, ' ', 2))
+        if args[2] then
+            remove_item(table.concat(args, ' ', 2))
         else
             print('SellNPC Error: Specify an item to remove.')
         end
@@ -353,9 +357,9 @@ function cmd(...)
         clear_list()
     elseif arg1 == 'reset' or arg1 == 'default' or arg1 == 'defaults' then
         reset_list()
-    elseif commands[1] then
+    elseif args[1] then
         -- Original behavior - sell specific item
-        check_item(table.concat(commands, ' ', 1))
+        check_item(table.concat(args, ' ', 1))
     elseif appraised then
         check_que()
     end

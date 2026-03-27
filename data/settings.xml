@@ -1,0 +1,68 @@
+<?xml version="1.1" ?>
+<settings>
+    <global>
+        <items>
+            <1>Acheron Shield</1>
+            <2>Beehive Chip</2>
+            <3>Bird Egg</3>
+            <4>Chapuli Wing</4>
+            <5>Chapuli Horn</5>
+            <6>Colibri Beak</6>
+            <7>Colibri Feather</7>
+            <8>Crab Shell</8>
+            <9>Craklaw Pincer</9>
+            <10>Flytrap Leaf</10>
+            <11>Giant Stinger</11>
+            <12>Hare Meat</12>
+            <13>High-Quality Crab Shell</13>
+            <14>Honey</14>
+            <15>Matamata Shell</15>
+            <16>Land Crab Meat</16>
+            <17>Prize Powder</17>
+            <18>Raaz Hide</18>
+            <19>Raaz Tusk</19>
+            <20>Rabbit Hide</20>
+            <21>Raptor Skin</21>
+            <22>Snap. Secretion</22>
+            <23>Snap. Tendril</23>
+            <24>Tulfaire Feather</24>
+            <25>Velkk Mask</25>
+            <26>Velkk Necklace</26>
+            <27>Voay Sword -1</27>
+            <28>Voay Staff -1</28>
+        </items>
+    </global>
+    <linktri>
+        <items>
+            <1>Acheron Shield</1>
+            <2>Beehive Chip</2>
+            <3>Bird Egg</3>
+            <4>Chapuli Wing</4>
+            <5>Chapuli Horn</5>
+            <6>Colibri Beak</6>
+            <7>Colibri Feather</7>
+            <8>Crab Shell</8>
+            <9>Craklaw Pincer</9>
+            <10>Flytrap Leaf</10>
+            <11>Giant Stinger</11>
+            <12>Hare Meat</12>
+            <13>High-Quality Crab Shell</13>
+            <14>Honey</14>
+            <15>Matamata Shell</15>
+            <16>Land Crab Meat</16>
+            <17>Prize Powder</17>
+            <18>Raaz Hide</18>
+            <19>Raaz Tusk</19>
+            <20>Rabbit Hide</20>
+            <21>Raptor Skin</21>
+            <22>Snap. Secretion</22>
+            <23>Snap. Tendril</23>
+            <24>Tulfaire Feather</24>
+            <25>Velkk Mask</25>
+            <26>Velkk Necklace</26>
+            <27>Voay Sword -1</27>
+            <28>Voay Staff -1</28>
+            <29>Lustreless Wing</29>
+        </items>
+    </linktri>
+</settings>

@@ -414,12 +414,19 @@ end
 windower.register_event('zone change', 'logout', reset)
 
 windower.register_event('incoming chunk', function(id, original, modified, injected, blocked)
-    if id == 0x03C then
+    -- 0x0AA: NPC sell window appraisal packet -- server sends this when the
+    -- sell menu is actually opened, not just when the NPC is in range
+    if id == 0x0AA then
         appraised = {}
         if auto_sell_enabled and not monitoring then
-            print('SellNPC: Shop detected, resuming auto-sell...')
+            print('SellNPC: Sell window detected, resuming auto-sell...')
             monitoring = true
             coroutine.schedule(start_auto_sell, 0.5)
+        end
+    -- 0x034: menu close packet -- sell window has been closed
+    elseif id == 0x034 then
+        if appraised then
+            reset()
         end
     end
 end)

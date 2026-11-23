@@ -33,7 +33,7 @@
         </items>
     </global>
     <Linktri>
-        <items>
+                                                                                        <items>
             <1>Acheron Shield</1>
             <2>Beehive Chip</2>
             <3>Bird Egg</3>
@@ -63,6 +63,16 @@
             <27>Voay Sword -1</27>
             <28>Voay Staff -1</28>
             <29>Lustreless Wing</29>
+            <30>??? Earring: RDM</30>
+            <31>??? Earring: DNC</31>
+            <32>??? Earring: COR</32>
+            <33>??? Earring: BLU</33>
+            <34>??? Earring: SAM</34>
+            <35>??? Earring: BRD</35>
+            <36>??? Earring: DRK</36>
+            <37>??? Earring: THF</37>
+            <38>??? Earring: WHM</38>
+            <39>??? Earring: MNK</39>
         </items>
     </Linktri>
 </settings>

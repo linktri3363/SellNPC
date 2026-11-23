@@ -32,7 +32,7 @@
             <28>Voay Staff -1</28>
         </items>
     </global>
-    <linktri>
+    <Linktri>
         <items>
             <1>Acheron Shield</1>
             <2>Beehive Chip</2>
@@ -64,5 +64,5 @@
             <28>Voay Staff -1</28>
             <29>Lustreless Wing</29>
         </items>
-    </linktri>
+    </Linktri>
 </settings>

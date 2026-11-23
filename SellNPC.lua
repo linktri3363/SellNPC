@@ -16,6 +16,7 @@ auto_sell_enabled = false
 auto_sell_items = T{}
 monitoring = false
 actions = false  -- FIX #1: explicitly initialize actions as a global
+item_appraised = T{}  -- per-item appraisal tracking
 
 -- Default items (Gr. Velkk Coffer contents)
 local default_items = T{
@@ -56,12 +57,6 @@ local defaults = {
 
 -- Settings will be loaded here
 local settings
-
--- Save settings to file
-local function save_settings()
-    settings:save()
-    print('SellNPC: Settings saved.')
-end
 
 -- Build lookup table of item IDs for auto-sell
 local function build_auto_sell_list()
@@ -260,11 +255,6 @@ local SELL_MAX_RETRIES = 20
 function sell_npc_item(item, retries)
     retries = retries or 0
 
-    if not appraised then
-        actions = false
-        return
-    end
-
     -- FIX #5: bail out if we've retried too many times
     if retries >= SELL_MAX_RETRIES then
         print('SellNPC: Gave up trying to sell %s after %d attempts.':format(
@@ -276,17 +266,17 @@ function sell_npc_item(item, retries)
     local index, count = find_item(item)
     if not index then
         actions = false
-        if not appraised[item] then
+        if not item_appraised[item] then
             print('SellNPC Error: %s not found in inventory.':format(res_items[item].en))
         end
         return check_que(item)
     end
 
-    if not appraised[item] then count = 1 end
+    if not item_appraised[item] then count = 1 end
     windower.packets.inject_outgoing(0x084, string.char(0x084, 0x06, 0, 0, (count % 256), 0, 0, 0, (item % 256), (math.floor((item / 256) % 256)), (index % 256), 0))
 
-    if not appraised[item] then
-        appraised[item] = true
+    if not item_appraised[item] then
+        item_appraised[item] = true
         coroutine.sleep((1 + math.random()))
         return sell_npc_item(item, retries + 1)
     end
@@ -298,11 +288,6 @@ end
 
 -- FIX #4: guard against double-starting auto-sell
 function start_auto_sell()
-    if not appraised then
-        print('SellNPC: You must have an NPC shop window open to use auto-sell.')
-        return
-    end
-
     -- FIX #4: prevent duplicate monitoring loops
     if auto_sell_enabled and monitoring then
         print('SellNPC: Auto-sell is already running.')
@@ -404,6 +389,7 @@ windower.register_event('addon command', cmd)
 -- FIX #7: reset now also clears actions to prevent stale state
 function reset()
     appraised = nil
+    item_appraised = T{}
     monitoring = false
     actions = false
     if auto_sell_enabled then
@@ -413,74 +399,116 @@ end
 
 windower.register_event('zone change', 'logout', reset)
 
-windower.register_event('incoming chunk', function(id, original, modified, injected, blocked)
-    -- 0x0AA: NPC sell window appraisal packet -- server sends this when the
-    -- sell menu is actually opened, not just when the NPC is in range
-    if id == 0x0AA then
-        appraised = {}
-        if auto_sell_enabled and not monitoring then
-            print('SellNPC: Sell window detected, resuming auto-sell...')
-            monitoring = true
-            coroutine.schedule(start_auto_sell, 0.5)
-        end
-    -- 0x034: menu close packet -- sell window has been closed
-    elseif id == 0x034 then
-        if appraised then
-            reset()
+-- Parse items directly from settings.xml, preferring the character-specific
+-- block over global. Bypasses config lib's broken character detection.
+local function load_items_from_xml()
+    local player = windower.ffxi.get_player()
+    local char_name = player and player.name or nil
+
+    local xml_path = windower.addon_path .. 'data/settings.xml'
+    local f = io.open(xml_path, 'r')
+    if not f then
+        return nil
+    end
+
+    local content = f:read('*all')
+    f:close()
+
+    -- Try character block first, fall back to global
+    local blocks_to_try = {}
+    if char_name then
+        table.insert(blocks_to_try, char_name)
+    end
+    table.insert(blocks_to_try, 'global')
+
+    for _, block_name in ipairs(blocks_to_try) do
+        local block = content:match('<' .. block_name .. '>(.-)</' .. block_name .. '>')
+        if block then
+            local items_block = block:match('<items>(.-)</items>')
+            if items_block then
+                local items_list = T{}
+                for item_val in items_block:gmatch('<[^>]+>([^<]+)<[^>]+>') do
+                    local trimmed = item_val:match('^%s*(.-)%s*$')
+                    -- Decode XML entities
+                    trimmed = trimmed:gsub('&apos;', "'"):gsub('&amp;', '&'):gsub('&lt;', '<'):gsub('&gt;', '>')
+                    if trimmed ~= '' then
+                        table.insert(items_list, trimmed)
+                    end
+                end
+                if #items_list > 0 then
+                    print('SellNPC: Loaded %d items from <%s> block.':format(#items_list, block_name))
+                    return items_list
+                end
+            end
         end
     end
-end)
 
-windower.register_event('load', function()
+    return nil
+end
+
+local function save_items_to_xml(items_list)
+    local player = windower.ffxi.get_player()
+    local char_name = player and player.name or 'global'
+
+    local xml_path = windower.addon_path .. 'data/settings.xml'
+    local f = io.open(xml_path, 'r')
+    local content = f and f:read('*all') or '<?xml version="1.1" ?>\n<settings>\n</settings>'
+    if f then f:close() end
+
+    -- Build new items block
+    local items_xml = '        <items>\n'
+    for i, name in ipairs(items_list) do
+        local encoded = name:gsub("'", '&apos;'):gsub('&', '&amp;')
+        items_xml = items_xml .. ('            <%d>%s</%d>\n'):format(i, encoded, i)
+    end
+    items_xml = items_xml .. '        </items>'
+
+    -- Replace or insert character block
+    if content:find('<' .. char_name .. '>') then
+        -- Replace existing items block inside character block
+        content = content:gsub(
+            '(<' .. char_name .. '>.-)<items>.-</items>(.-</' .. char_name .. '>)',
+            '%1' .. items_xml .. '%2'
+        )
+    else
+        -- Insert new character block before </settings>
+        local char_block = '    <' .. char_name .. '>\n' .. items_xml .. '\n    </' .. char_name .. '>\n'
+        content = content:gsub('</settings>', char_block .. '</settings>')
+    end
+
+    local f_out = io.open(xml_path, 'w')
+    if f_out then
+        f_out:write(content)
+        f_out:close()
+    end
+end
+
+local function load_settings()
+    -- Use config lib for initialization, then override items with direct XML parse
     settings = config.load(defaults)
 
-    if settings.items then
+    local items_from_xml = load_items_from_xml()
+    if items_from_xml and #items_from_xml > 0 then
+        settings.items = items_from_xml
+    elseif settings.items then
         local items_list = T{}
-
-        -- The Windower config library saves sequential tables with numeric string
-        -- keys ("1", "2", "3"...) in XML. Collect and sort them to preserve order.
-        local numeric_keys = T{}
-        for k, v in pairs(settings.items) do
-            local n = tonumber(k)
-            if n then
-                table.insert(numeric_keys, n)
+        for i, v in ipairs(settings.items) do
+            if type(v) == 'string' and v ~= '' then
+                table.insert(items_list, v)
             end
         end
-
-        if #numeric_keys > 0 then
-            table.sort(numeric_keys)
-            for _, n in ipairs(numeric_keys) do
-                local v = settings.items[tostring(n)]
-                -- config lib may wrap values in a table; unwrap if needed
-                if type(v) == 'table' and v[1] then
-                    v = v[1]
-                end
-                if type(v) == 'string' and v ~= '' then
-                    table.insert(items_list, v)
-                end
-            end
-        end
-
-        -- Last resort: try plain ipairs/pairs for raw string values
-        if #items_list == 0 then
-            for i, v in ipairs(settings.items) do
-                if type(v) == 'string' then table.insert(items_list, v) end
-            end
-        end
-        if #items_list == 0 then
-            for k, v in pairs(settings.items) do
-                if type(v) == 'string' then table.insert(items_list, v) end
-            end
-        end
-
-        if #items_list > 0 then
-            settings.items = items_list
-        else
-            settings.items = T(default_items:copy())
-        end
+        settings.items = #items_list > 0 and items_list or T(default_items:copy())
     else
         settings.items = T(default_items:copy())
     end
 
     build_auto_sell_list()
-end)
+end
+
+local function save_settings()
+    save_items_to_xml(settings.items)
+    print('SellNPC: Settings saved.')
+end
+
+windower.register_event('load', load_settings)
+windower.register_event('login', load_settings)
